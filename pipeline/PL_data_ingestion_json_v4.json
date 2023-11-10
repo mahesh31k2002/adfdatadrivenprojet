@@ -1,0 +1,197 @@
+{
+	"name": "PL_data_ingestion_json_v4",
+	"properties": {
+		"description": "Ingest webstore sales data to datalake",
+		"activities": [
+			{
+				"name": "Copy web store online sales data",
+				"description": "Copy online sales data from the webstore and ingest to datalake",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.0:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_abls_buylot_Json",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_adls_data_engineering_json",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Execute Pipeline1",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Stored procedure1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_util_email_send_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"systemcode": {
+							"value": "@pipeline().parameters.Systemcode",
+							"type": "Expression"
+						},
+						"datasetname": {
+							"value": "@pipeline().parameters.Dataset",
+							"type": "Expression"
+						}
+					}
+				}
+			},
+			{
+				"name": "Stored procedure1",
+				"type": "SqlServerStoredProcedure",
+				"dependsOn": [
+					{
+						"activity": "Copy web store online sales data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"storedProcedureName": "[dbo].[InsertPipelineLog]",
+					"storedProcedureParameters": {
+						"EndTime": {
+							"value": {
+								"value": "@convertFromUtc(utcNow(),'India Standard Time' )",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"PipelineID": {
+							"value": {
+								"value": "@pipeline().RunId",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"PipelineName": {
+							"value": {
+								"value": "@pipeline().Pipeline",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"RunID": {
+							"value": {
+								"value": "@pipeline().parameters.RunID",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"SnapshotDate": {
+							"value": {
+								"value": "@formatDateTime(pipeline().parameters.SnapshotDate,'yyyy-MM-dd')",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"SourceToTargetID": {
+							"value": "2",
+							"type": "Int32"
+						},
+						"StartTime": {
+							"value": {
+								"value": "@convertFromUtc(pipeline().TriggerTime, 'India Standard Time')",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						},
+						"Status": {
+							"value": {
+								"value": "SUCCESS",
+								"type": "Expression"
+							},
+							"type": "String"
+						},
+						"UpdateAt": {
+							"value": {
+								"value": "@convertFromUtc(utcNow(), 'India Standard Time')",
+								"type": "Expression"
+							},
+							"type": "DateTime"
+						}
+					}
+				},
+				"linkedServiceName": {
+					"referenceName": "LS_asql_data_dataengineering_metadata",
+					"type": "LinkedServiceReference"
+				}
+			}
+		],
+		"parameters": {
+			"Systemcode": {
+				"type": "string",
+				"defaultValue": "OWS"
+			},
+			"Dataset": {
+				"type": "string",
+				"defaultValue": "Sales"
+			},
+			"RunID": {
+				"type": "string",
+				"defaultValue": "1"
+			},
+			"SnapshotDate": {
+				"type": "string",
+				"defaultValue": "2023-10-29"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-10-30T01:59:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

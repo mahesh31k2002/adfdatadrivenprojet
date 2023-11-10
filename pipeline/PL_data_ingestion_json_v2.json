@@ -1,0 +1,92 @@
+{
+	"name": "PL_data_ingestion_json_v2",
+	"properties": {
+		"description": "Ingest webstore sales data to datalake",
+		"activities": [
+			{
+				"name": "Copy web store online sales data",
+				"description": "Copy online sales data from the webstore and ingest to datalake",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.0:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_abls_buylot_Json",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_adls_data_engineering_json",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Web1",
+				"description": "Send email to GMAIL",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "Copy web store online sales data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"url": "https://prod-68.eastus.logic.azure.com:443/workflows/d846295babe4404ca871413e0f5e0576/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=a4nbtK77beh2Db495MHcgqKXghCOKYaiZdHdRq4i4uY",
+					"method": "POST",
+					"headers": {
+						"Content-Type": "application/json"
+					},
+					"body": {
+						"value": "@json(\n    concat('{\"emailaddress\":\"mahesh31k2002@gmail.com\",\n    \"subject\":\"adf pipeline data ingestion\",\n    \"messagebody\":\"ingestion of webstore data into dl is completed successfully\"}'\n    )\n)",
+						"type": "Expression"
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2023-10-29T10:51:27Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

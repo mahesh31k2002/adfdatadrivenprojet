@@ -1,0 +1,117 @@
+{
+	"name": "PL_util_email_send_notification",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup1",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderStoredProcedureName": "[dbo].[GetEmailAddresses]",
+						"storedProcedureParameters": {
+							"DatasetName": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.datasetname",
+									"type": "Expression"
+								}
+							},
+							"SystemCode": {
+								"type": "String",
+								"value": {
+									"value": "@pipeline().parameters.systemcode",
+									"type": "Expression"
+								}
+							}
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_asql_email_address",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach email address",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup1",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup1').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Web1",
+							"description": "Send email to GMAIL",
+							"type": "WebActivity",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"url": "https://prod-68.eastus.logic.azure.com:443/workflows/d846295babe4404ca871413e0f5e0576/triggers/manual/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=a4nbtK77beh2Db495MHcgqKXghCOKYaiZdHdRq4i4uY",
+								"method": "POST",
+								"headers": {
+									"Content-Type": "application/json"
+								},
+								"body": {
+									"value": "@json(\n    concat('{\"emailaddress\":\"',item().emailaddress,'\",\n    \"subject\":\"',pipeline().parameters.subject,'\",\n    \"messagebody\":\"',pipeline().parameters.message,'\"}'\n    )\n)",
+									"type": "Expression"
+								}
+							}
+						}
+					]
+				}
+			}
+		],
+		"parameters": {
+			"systemcode": {
+				"type": "string",
+				"defaultValue": "OWS"
+			},
+			"datasetname": {
+				"type": "string",
+				"defaultValue": "Sales"
+			},
+			"subject": {
+				"type": "string"
+			},
+			"message": {
+				"type": "string"
+			}
+		},
+		"folder": {
+			"name": "utility"
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-10-30T01:59:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

@@ -1,0 +1,107 @@
+{
+	"name": "PL_data_ingestion_json_v3",
+	"properties": {
+		"description": "Ingest webstore sales data to datalake",
+		"activities": [
+			{
+				"name": "Copy web store online sales data",
+				"description": "Copy online sales data from the webstore and ingest to datalake",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.0:10:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobStorageReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "DS_abls_buylot_Json",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "DS_adls_data_engineering_json",
+						"type": "DatasetReference"
+					}
+				]
+			},
+			{
+				"name": "Execute Pipeline1",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "Copy web store online sales data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "PL_util_email_send_notification",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"systemcode": {
+							"value": "@pipeline().parameters.Systemcode",
+							"type": "Expression"
+						},
+						"datasetname": {
+							"value": "@pipeline().parameters.Dataset",
+							"type": "Expression"
+						}
+					}
+				}
+			}
+		],
+		"parameters": {
+			"Systemcode": {
+				"type": "string",
+				"defaultValue": "OWS"
+			},
+			"Dataset": {
+				"type": "string",
+				"defaultValue": "Sales"
+			},
+			"RunID": {
+				"type": "string"
+			},
+			"SnapshotDate": {
+				"type": "string",
+				"defaultValue": "2023-10-29"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2023-10-30T01:59:16Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}
